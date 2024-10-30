@@ -1,0 +1,6 @@
+myenv/*
+logs/
+.env
+db.sqlite3
+.python-version
+.idea/

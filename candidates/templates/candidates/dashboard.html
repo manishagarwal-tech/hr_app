@@ -1,0 +1,72 @@
+{% extends "hr_app/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="display-4 text-center">Dashboard</h1>
+    <p class="lead text-center">Welcome to the HR Management Dashboard</p>
+    <hr>
+
+    <!-- Overview Section -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">Upload Resume</h5>
+                    <p class="card-text">Upload a candidate's resume to extract primary and secondary skills along with experience level.</p>
+                    <a href="{% url 'upload' %}" class="btn btn-primary btn-block">Go to Upload</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">View Submissions</h5>
+                    <p class="card-text">Check candidates' submissions, review answers, and verify solution accuracy based on AI evaluations.</p>
+                    <a href="#" class="btn btn-primary btn-block">View Submissions</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title">User Management</h5>
+                    <p class="card-text">Manage user accounts, assign roles, and review access logs.</p>
+                    <a href="#" class="btn btn-primary btn-block">Manage Users</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities Section -->
+    <h3 class="mt-5">Recent Activities</h3>
+    <div class="list-group">
+        <a href="#" class="list-group-item list-group-item-action">
+            <strong>Resume Upload</strong> - John Doe’s resume processed for skill extraction on <span class="text-muted">Oct 12, 2023</span>
+        </a>
+        <a href="#" class="list-group-item list-group-item-action">
+            <strong>Submissions Reviewed</strong> - Admin verified answers for Sarah Lee’s submissions on <span class="text-muted">Oct 11, 2023</span>
+        </a>
+        <a href="#" class="list-group-item list-group-item-action">
+            <strong>New User Added</strong> - Mark Johnson registered as an Admin on <span class="text-muted">Oct 10, 2023</span>
+        </a>
+    </div>
+
+    <!-- Quick Links Section -->
+    <div class="row mt-5">
+        <div class="col-md-6">
+            <h4>Quick Links</h4>
+            <ul class="list-unstyled">
+                <li><a href="{% url 'upload' %}" class="text-primary">Upload Resume</a></li>
+                <li><a href="" class="text-primary">View Submissions</a></li>
+                <li><a href="" class="text-primary">User Management</a></li>
+            </ul>
+        </div>
+        <div class="col-md-6 text-right">
+            <p class="text-muted">Logged in as {{ user.username }}</p>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

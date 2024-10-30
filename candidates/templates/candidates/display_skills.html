@@ -1,0 +1,68 @@
+{% extends "hr_app/base.html" %}
+
+{% block title %}Upload Resume{% endblock %}
+
+{% block content %}
+ <div class="container mt-5">
+        <h2 class="mb-4">Extracted Skills</h2>
+        <form id="skillsForm">
+            <table class="table table-bordered table-striped">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Skill</th>
+                        <th>Expertise Level</th>
+                        <th>Get Questions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for skill in skills %}
+                    <tr>
+                        <td>{{ skill }}</td>
+                        <td>
+                            <select class="form-control" name="expertise_{{ forloop.counter }}">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Medium">Medium</option>
+                                <option value="Expertise">Expertise</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-primary get-questions" data-skill="{{ skill }}">Get Questions</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </form>
+
+        <div id="result" class="mt-4"></div>
+    </div>
+
+<script>
+        document.querySelectorAll('.get-questions').forEach(button => {
+                button.addEventListener('click', async () => {
+                    const skill = button.getAttribute('data-skill');
+                    const expertiseLevel = button.closest('tr').querySelector('select').value;
+
+                    try {
+                        const response = await fetch("{% url 'get_questions' %}", {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': '{{ csrf_token }}'
+                            },
+                            body: JSON.stringify({ skill, expertise: expertiseLevel })
+                        });
+                        const result = await response.json();
+                        document.getElementById('result').innerHTML = `
+                            <h4>Questions for ${skill} (${expertiseLevel}):</h4>
+                            ${result.questions}
+                        `;
+                    } catch (error) {
+                        console.error('Error fetching questions:', error);
+                    }
+                });
+            });
+
+    </script>
+
+{% endblock %}
