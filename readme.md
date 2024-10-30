@@ -57,6 +57,23 @@ python manage.py runserver
 ```
 The app will be available at http://127.0.0.1:8000/.
 
+## Screenshots
+
+### 1. Login Page
+![Login Page](screenshots/login-screen.png)
+
+### 2. Resume Upload Page
+![Resume Upload Page](screenshots/upload-screen.png)
+
+### 3. Skills Display
+![Skills Display](screenshots/skill-display.png)
+
+### 4. Skills Display with Expertise Level Selection
+![Skills Display](screenshots/question-lists-feature.png)
+
+### 5. Generated Interview Questions
+![Interview Questions](screenshots/get-questions.png)
+
 ## Usage
 1. **Login**: Go to /login to access the main features of the application.
 2. **Upload Resume**: Navigate to the "Upload" page, select a PDF resume, and upload it. The app will process the resume to extract skills and experience.
