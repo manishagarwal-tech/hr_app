@@ -25,7 +25,7 @@ services:
       - DB_PASSWORD=hr_app_pass
       - DB_HOST=db
       - DB_PORT=5432
-      - GROQ_API_KEY=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
+      - GROQ_API_KEY={{groq_api_key}}
     links:
       - db
 

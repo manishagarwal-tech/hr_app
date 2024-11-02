@@ -1,7 +1,15 @@
 {% extends "hr_app/base.html" %}
 
 {% block title %}Upload Resume{% endblock %}
-
+<style>
+.answer {
+    margin-top: 10px;
+    background-color: #f9f9f9;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+</style>
 {% block content %}
  <div class="container mt-5">
         <h2 class="mb-4">Extracted Skills</h2>
@@ -38,31 +46,60 @@
     </div>
 
 <script>
-        document.querySelectorAll('.get-questions').forEach(button => {
-                button.addEventListener('click', async () => {
-                    const skill = button.getAttribute('data-skill');
-                    const expertiseLevel = button.closest('tr').querySelector('select').value;
+    document.querySelectorAll('.get-questions').forEach(button => {
+        button.addEventListener('click', async () => {
+            const skill = button.getAttribute('data-skill');
+            const expertiseLevel = button.closest('tr').querySelector('select').value;
 
-                    try {
-                        const response = await fetch("{% url 'get_questions' %}", {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': '{{ csrf_token }}'
-                            },
-                            body: JSON.stringify({ skill, expertise: expertiseLevel })
-                        });
-                        const result = await response.json();
-                        document.getElementById('result').innerHTML = `
-                            <h4>Questions for ${skill} (${expertiseLevel}):</h4>
-                            ${result.questions}
-                        `;
-                    } catch (error) {
-                        console.error('Error fetching questions:', error);
-                    }
+            try {
+                const response = await fetch("{% url 'get_questions' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify({ skill, expertise: expertiseLevel })
                 });
-            });
 
-    </script>
+                // Check if the response is successful
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                const result = await response.json(); // Parse the response as JSON
+
+                // Ensure result has questions
+                if (!result.questions) {
+                    throw new Error("Questions data is missing from the response");
+                }
+
+                const questionsHTML = result.questions.map((q, index) => `
+                    <div class="question-block">
+                        <p><strong>Question:</strong> ${q.question}</p>
+                        <button class="show-answer btn btn-secondary" data-index="${index}">Show Answer</button>
+                        <div class="answer" id="answer-${index}" style="display: none;">${q.answer}</div>
+                    </div>
+                `).join('');
+
+                document.getElementById('result').innerHTML = `
+                    <h4>Questions for ${skill} (${expertiseLevel}):</h4>
+                    ${questionsHTML}
+                `;
+
+                // Add event listeners for show answer buttons
+                document.querySelectorAll('.show-answer').forEach(answerButton => {
+                    answerButton.addEventListener('click', () => {
+                        const index = answerButton.getAttribute('data-index');
+                        const answerDiv = document.getElementById(`answer-${index}`);
+                        answerDiv.style.display = answerDiv.style.display === 'none' ? 'block' : 'none';
+                    });
+                });
+
+            } catch (error) {
+                console.error('Error fetching questions:', error);
+            }
+        });
+    });
+</script>
 
 {% endblock %}

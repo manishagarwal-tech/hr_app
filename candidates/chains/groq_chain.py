@@ -25,8 +25,9 @@ class HRChain:
             ### RESUME TEXT:
             {resume_data}
             ### INSTRUCTION:
-            Extract the candidate's primary skills, secondary skills, and experience level in years from the resume text.
-            Return the result in JSON format with the following keys: `primary_skills`, `secondary_skills`, `experience`.
+            Extract the candidate's name, primary skills, secondary skills, and experience level in years from \ 
+            the resume text. The candidate's name may appear in the header or at the beginning of the document.
+            Return the result in JSON format with the following keys: `name`, `primary_skills`, `secondary_skills`, `experience`.
             ### VALID JSON:
             """
         )
@@ -43,12 +44,14 @@ class HRChain:
         prompt = PromptTemplate.from_template(
             """
             ### INSTRUCTION:
-            Generate 5 interview questions based on the following skill and expertise level.
+            Generate 5 interview questions and their answers based on the following skill and expertise level.
             Skill: {skill}
             Expertise Level: {expertise}
-            Respond only with a numbered list of questions in HTML list format without preambles, explanations, or additional formatting.
+            Respond only JSON without preambles, explanations, or additional formatting with following \
+            keys: `question` , `answer`
 
             ### QUESTIONS (NO PREAMBLE):
+            ### VALID JSON
             """
         )
         # prompt = PromptTemplate.from_template(

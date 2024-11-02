@@ -1,15 +1,17 @@
+from rest_framework import status
 from rest_framework.views import APIView
 from django.shortcuts import render, redirect
 from rest_framework.response import Response
-from rest_framework import status
+from django.shortcuts import get_object_or_404
 from .chains.groq_chain import HRChain
-from django.http import JsonResponse
-from .models import CandidateProfile
+from django.http import JsonResponse, HttpResponseRedirect
+from django.urls import reverse
+from .models import CandidateProfile, Question
 from .serializers import ResumeUploadSerializer
 import logging
-from django.urls import reverse
 from rest_framework.permissions import IsAuthenticated
 import fitz
+import json
 from io import BytesIO
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.contrib.auth.decorators import login_required
@@ -28,7 +30,10 @@ class PortalLoginView(View):
     template_name = 'registration/login.html'
 
     def get(self, request):
-        return render(request, self.template_name)
+        if request.user.is_authenticated :
+            return redirect('dashboard')
+        else:
+            return render(request, self.template_name)
 
     def post(self, request):
         username = request.POST.get('username')
@@ -102,23 +107,35 @@ class ResumeUploadView(View):
             # Extract skills and experience
             chain = HRChain()
             extracted_data = chain.extract_skills_and_experience(resume_text)
+            candidate_name = extracted_data.get("name", "Unknown")
 
-            # Update candidate profile with extracted data
-            candidate = CandidateProfile.objects.create(resume=resume_file)
-            candidate.primary_skills = extracted_data.get("primary_skills", [])
-            candidate.secondary_skills = extracted_data.get("secondary_skills", [])
-            candidate.experience = extracted_data.get("experience", 0)
-            candidate.save()
+            # Check if candidate exists
+            candidate, created = CandidateProfile.objects.get_or_create(
+                user=request.user,
+                name=candidate_name,
+                defaults={
+                    "resume": resume_file,
+                    "primary_skills": extracted_data.get("primary_skills", []),
+                    "secondary_skills": extracted_data.get("secondary_skills", []),
+                    "experience": extracted_data.get("experience", 0),
+                }
+            )
 
-            # Retrieve top 5 primary and secondary skills
+            # If candidate exists, increment version and update resume
+            if not created:
+                candidate.resume_version += 1
+                candidate.resume = resume_file
+                candidate.save()
+
+            # Retrieve and save top skills to session
             top_primary_skills = candidate.primary_skills[:5]
             top_secondary_skills = candidate.secondary_skills[:5]
             skills_to_display = top_primary_skills + top_secondary_skills
-
-            # Redirect to display skills page
             request.session['skills'] = skills_to_display
             request.session['candidate_id'] = candidate.id
-            return redirect(reverse('display_skills'))
+            return HttpResponseRedirect(reverse('display_skills'))
+
+
 
         return JsonResponse(serializer.errors, status=400)
 
@@ -128,11 +145,29 @@ class GetQuestionsView(APIView):
     def post(self, request):
         skill = request.data.get('skill')
         expertise = request.data.get('expertise')
+        candidate_id = request.session.get('candidate_id')
+        candidate = get_object_or_404(CandidateProfile, id=candidate_id, user=request.user)
 
-        # Logic to fetch questions based on the skill and expertise level
+        # Generate and save questions
         chain = HRChain()
-        questions = chain.generate_interview_questions(skill, expertise)
-        return Response({'questions': questions}, status=status.HTTP_200_OK)
+        questions_list = chain.generate_interview_questions(skill, expertise)
+
+        try:
+            questions_list = json.loads(questions_list)  # Convert string to JSON
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Failed to parse questions and answers."}, status=500)
+
+        # Save each question to the database
+        for qa in questions_list:
+            Question.objects.create(
+                candidate=candidate,
+                question_text=qa['question'],
+                answer_text=qa['answer']
+            )
+
+            # Prepare a response with just the questions for display
+        questions_and_answers = [{'question': qa['question'], 'answer': qa['answer']} for qa in questions_list]
+        return Response({'questions': questions_and_answers}, status=status.HTTP_200_OK)
 
 
 @method_decorator(login_required, name='dispatch')
