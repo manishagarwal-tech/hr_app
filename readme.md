@@ -109,3 +109,13 @@ Contributions are welcome! Please open an issue or submit a pull request for imp
 
 ## Happy coding! Let’s simplify the interview process with better question generation.
 
+
+
+### next stages:
+- deployment
+- view submissions
+- shuffle of current generated questions
+- submission of feedback against a profile.
+- bais around a particular topic.
+- JD vs Resume matching score. (stage 2)
+- How feedback and score being given by the interviewer. (based on answer given by candidate) (stage 2)

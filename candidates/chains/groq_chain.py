@@ -4,8 +4,9 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.exceptions import OutputParserException
 from dotenv import load_dotenv
-
+import  logging
 load_dotenv()
+logger = logging.getLogger(__name__)
 
 class HRChain:
     def __init__(self):
@@ -13,7 +14,7 @@ class HRChain:
         self.llm = ChatGroq(
             temperature=0,
             groq_api_key=os.getenv("GROQ_API_KEY"),
-            model_name="llama-3.1-70b-versatile"
+            model_name=os.getenv('LLM_MODEL_NAME')
         )
 
     def extract_skills_and_experience(self, resume_text):
@@ -76,7 +77,3 @@ class HRChain:
         # Assuming the output is plain text, split it into a list of questions
         questions = response.content
         return questions
-
-if __name__ == "__main__":
-    # Testing API key loading
-    print(os.getenv("GROQ_API_KEY"))

@@ -3,11 +3,13 @@ from rest_framework.views import APIView
 from django.shortcuts import render, redirect
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+
+from .chains.chat_llm import ChatLLM
 from .chains.groq_chain import HRChain
 from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import reverse
 from .models import CandidateProfile, Question
-from .serializers import ResumeUploadSerializer
+from .serializers import ResumeUploadSerializer, CandidateProfileSerializer, CandidateSubmissionSerializer
 import logging
 from rest_framework.permissions import IsAuthenticated
 import fitz
@@ -139,6 +141,16 @@ class ResumeUploadView(View):
 
         return JsonResponse(serializer.errors, status=400)
 
+    #get all submissing from the database
+    def get(self, request):
+        template_name = 'candidates/submission_list.html'
+        candidates = CandidateProfile.objects.all()
+        serializer = CandidateSubmissionSerializer(candidates, many=True)
+        context = {
+            "candidates": serializer.data
+        }
+        return render(request, template_name, context)
+
 class GetQuestionsView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -181,4 +193,24 @@ class DisplaySkillsView(View):
         return render(request, 'candidates/display_skills.html', {
             'skills': skills,
             'candidate_id': candidate_id,
+        })
+
+
+@method_decorator(login_required, name='dispatch')
+class ChatRoomView(View):
+    """
+    View to handle the custom chat with LLM API
+    """
+    def get(self, request):
+        template_name = 'candidates/chat.html'
+        return render(request, template_name)
+
+    def post(self, request):
+        user_question = request.POST.get("chat_text", "")
+        chat = ChatLLM()
+        response = chat.process_text(user_question)
+
+        return JsonResponse({
+            "human": response.get("human"),
+            "ai": response.get("ai")
         })

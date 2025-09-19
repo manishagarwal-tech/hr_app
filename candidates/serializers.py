@@ -6,6 +6,10 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
         model = CandidateProfile
         fields = ['id', 'name', 'primary_skills', 'experience', 'expertise_level']
 
+class CandidateSubmissionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CandidateProfile
+        fields = '__all__'
 
 class ResumeUploadSerializer(serializers.Serializer):
     resume = serializers.FileField()
