@@ -81,10 +81,10 @@ WSGI_APPLICATION = 'hr_app.wsgi.application'
 DATABASES = {
     'default': {
         "ENGINE": 'django.db.backends.postgresql_psycopg2',
-        "NAME": "hr_app",
-        "USER": "localuser",
-        "PASSWORD": "Shorthills!23",
-        "HOST": '127.0.0.1',
+        "NAME": os.getenv("DATABASE_NAME"),
+        "USER": os.getenv("DATABASE_USER"),
+        "PASSWORD": os.getenv("DATABASE_PASSWORD"),
+        "HOST": os.getenv("DATABASE_HOST"),
         "PORT": "5432",
     }
 }
@@ -204,7 +204,7 @@ PROMPT_VERSION = os.getenv("PROMPT_VERSION", "v1")
 CACHE_VERSION = os.getenv("CACHE_VERSION", "v1")
 GOOGLE_ADK_AGENT_CLASS = os.getenv("GOOGLE_ADK_AGENT_CLASS", "")
 
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "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")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama-3.1-8b-instant")
 QUESTION_MODEL_NAME = os.getenv("QUESTION_MODEL_NAME", LLM_MODEL_NAME)
 CHAT_MODEL_NAME = os.getenv("CHAT_MODEL_NAME", LLM_MODEL_NAME)
