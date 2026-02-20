@@ -1,6 +1,6 @@
 # HR Interview Question Generator
 
-This Django-based HR Interview Question Generator allows HR managers and interviewers to easily generate skill-based interview questions for candidates based on their resume. The system supports resume uploads, extracts skills, and provides questions tailored to the candidate's expertise level in selected skills.
+This Django-based HR Interview Question Generator helps HR managers and interviewers generate skill-based interview questions from candidate resumes, with an agentic pipeline that separates parsing, extraction, question generation, and validation. The system supports resume uploads, structured skill extraction, and questions tailored to the candidate's expertise level.
 
 ## Features
 
@@ -8,6 +8,7 @@ This Django-based HR Interview Question Generator allows HR managers and intervi
 - **Resume Upload**: Accepts PDF resumes and extracts primary and secondary skills using LangChain.
 - **Skill Display**: Lists top 5 primary and secondary skills for the candidate to select expertise levels.
 - **Dynamic Question Generation**: Generates interview questions based on chosen skill and expertise level, including coding challenges.
+- **Agentic AI Pipeline**: Modular orchestrator with sub-agents for parsing, extraction, question generation, and validation.
 - **RESTful API Endpoints**: Uses Django REST Framework to manage question generation.
 
 ## Tech Stack
@@ -16,6 +17,17 @@ This Django-based HR Interview Question Generator allows HR managers and intervi
 - **Frontend**: HTML, CSS, JavaScript, Bootstrap
 - **Database**: PostgreSQL (with PGVector for vector storage)
 - **Other Tools**: LangChain for skill extraction and question generation
+
+## Agentic Architecture
+
+The system uses a modular, agentic workflow orchestrated by a root controller:
+
+- **Resume Parser Agent**: Extracts text from uploaded PDFs.
+- **Skill Extractor Agent**: Produces a structured profile with skills and experience.
+- **Question Generator Agent**: Creates interview questions aligned to skill and expertise.
+- **Validator Agent**: Ensures output quality and schema compliance.
+
+This design keeps responsibilities isolated, improves testability, and allows future integration with Google ADK-based agents via configuration.
 
 ## Getting Started
 
