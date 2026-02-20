@@ -4,18 +4,12 @@ from django.shortcuts import render, redirect
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
-from .chains.chat_llm import ChatLLM
-from .chains.groq_chain import HRChain
+from .agents.orchestrator import ScreeningOrchestrator
 from django.http import JsonResponse, HttpResponseRedirect
 from django.urls import reverse
-from .models import CandidateProfile, Question
-from .serializers import ResumeUploadSerializer, CandidateProfileSerializer, CandidateSubmissionSerializer
-import logging
+from .models import CandidateProfile
+from .serializers import ResumeUploadSerializer, CandidateSubmissionSerializer
 from rest_framework.permissions import IsAuthenticated
-import fitz
-import json
-from io import BytesIO
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -24,8 +18,6 @@ from django.views import View
 from django.contrib import messages
 
 
-
-logger = logging.getLogger(__name__)
 
 #  =============== LOGIN AND LOGOUT VIEWS =============== #
 class PortalLoginView(View):
@@ -93,45 +85,15 @@ class ResumeUploadView(View):
             if resume_file.size == 0:
                 return JsonResponse({'error': 'Uploaded file is empty.'}, status=400)
 
-            resume_text = ""
-            if isinstance(resume_file, InMemoryUploadedFile):
-                pdf_data = BytesIO(resume_file.read())
-                pdf_data.seek(0)
-
-                try:
-                    with fitz.open(stream=pdf_data, filetype="pdf") as pdf_document:
-                        for page_num in range(pdf_document.page_count):
-                            page = pdf_document[page_num]
-                            resume_text += page.get_text()
-                except fitz.EmptyFileError as e:
-                    return JsonResponse({'error': 'The uploaded file is empty or not a valid PDF.'}, status=400)
-
-            # Extract skills and experience
-            chain = HRChain()
-            extracted_data = chain.extract_skills_and_experience(resume_text)
-            candidate_name = extracted_data.get("name", "Unknown")
-
-            # Check if candidate exists
-            candidate, created = CandidateProfile.objects.get_or_create(
-                user=request.user,
-                name=candidate_name,
-                defaults={
-                    "resume": resume_file,
-                    "primary_skills": extracted_data.get("primary_skills", []),
-                    "secondary_skills": extracted_data.get("secondary_skills", []),
-                    "experience": extracted_data.get("experience", 0),
-                }
-            )
-
-            # If candidate exists, increment version and update resume
-            if not created:
-                candidate.resume_version += 1
-                candidate.resume = resume_file
-                candidate.save()
+            orchestrator = ScreeningOrchestrator()
+            try:
+                candidate, extracted_data = orchestrator.process_resume(resume_file, request.user)
+            except ValueError as exc:
+                return JsonResponse({"error": str(exc)}, status=400)
 
             # Retrieve and save top skills to session
-            top_primary_skills = candidate.primary_skills[:5]
-            top_secondary_skills = candidate.secondary_skills[:5]
+            top_primary_skills = (candidate.primary_skills or [])[:5]
+            top_secondary_skills = (candidate.secondary_skills or [])[:5]
             skills_to_display = top_primary_skills + top_secondary_skills
             request.session['skills'] = skills_to_display
             request.session['candidate_id'] = candidate.id
@@ -160,25 +122,18 @@ class GetQuestionsView(APIView):
         candidate_id = request.session.get('candidate_id')
         candidate = get_object_or_404(CandidateProfile, id=candidate_id, user=request.user)
 
-        # Generate and save questions
-        chain = HRChain()
-        questions_list = chain.generate_interview_questions(skill, expertise)
+        if not skill or not expertise:
+            return JsonResponse({"error": "Skill and expertise are required."}, status=400)
 
+        orchestrator = ScreeningOrchestrator()
         try:
-            questions_list = json.loads(questions_list)  # Convert string to JSON
-        except json.JSONDecodeError:
-            return JsonResponse({"error": "Failed to parse questions and answers."}, status=500)
+            questions_list = orchestrator.generate_questions(candidate, skill, expertise)
+        except ValueError as exc:
+            return JsonResponse({"error": str(exc)}, status=500)
 
-        # Save each question to the database
-        for qa in questions_list:
-            Question.objects.create(
-                candidate=candidate,
-                question_text=qa['question'],
-                answer_text=qa['answer']
-            )
-
-            # Prepare a response with just the questions for display
-        questions_and_answers = [{'question': qa['question'], 'answer': qa['answer']} for qa in questions_list]
+        questions_and_answers = [
+            {"question": qa["question"], "answer": qa.get("answer")} for qa in questions_list
+        ]
         return Response({'questions': questions_and_answers}, status=status.HTTP_200_OK)
 
 
@@ -207,8 +162,21 @@ class ChatRoomView(View):
 
     def post(self, request):
         user_question = request.POST.get("chat_text", "")
-        chat = ChatLLM()
-        response = chat.process_text(user_question)
+        session_history = request.session.get("chat_history", [])
+        orchestrator = ScreeningOrchestrator()
+        candidate_id = request.session.get("candidate_id")
+        profile = None
+        if candidate_id:
+            candidate = CandidateProfile.objects.filter(id=candidate_id, user=request.user).first()
+            if candidate:
+                profile = {
+                    "name": candidate.name,
+                    "primary_skills": candidate.primary_skills or [],
+                    "secondary_skills": candidate.secondary_skills or [],
+                    "experience": candidate.experience,
+                }
+        response = orchestrator.chat(user_question, chat_history=session_history, profile=profile)
+        request.session["chat_history"] = response.get("chat_history", session_history)
 
         return JsonResponse({
             "human": response.get("human"),

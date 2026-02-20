@@ -1,0 +1,76 @@
+{% extends "hr_app/base.html" %}
+{% block title %}Chat Service{% endblock %}
+<style>
+.code-block {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    text-align: left;
+    overflow-x: auto;
+    font-family: monospace;
+}
+
+</style>
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <h2 class="text-center mb-4">Chat with Me</h2>
+    <p class="text-muted text-center">
+      Hello! I'm your friendly chatbot. I can help answer your questions, provide information, or just chat. I'm also super fast!
+    </p>
+
+    <!-- Chat Box -->
+    <div id="chat-box" class="border rounded p-3 mb-3 bg-light" style="height: 300px; overflow-y: auto;">
+      <div class="text-muted text-center">Start the conversation...</div>
+    </div>
+
+    <!-- Input Form -->
+    <form id="chatForm" method="POST" class="needs-validation" novalidate>
+      {% csrf_token %}
+      <div class="input-group">
+        <input type="text" id="chat_text" class="form-control" name="chat_text" placeholder="Ask me anything..." required>
+        <button type="submit" class="btn btn-primary">Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- JavaScript -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const form = document.getElementById("chatForm");
+  const chatBox = document.getElementById("chat-box");
+
+  form.addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const userMsg = formData.get("chat_text");
+
+    if (!userMsg.trim()) return;
+
+    // Add user message to chat box
+    chatBox.innerHTML += `<div><strong>You:</strong> ${userMsg}</div>`;
+
+    // Send AJAX request
+    fetch("", {
+      method: "POST",
+      body: formData,
+      headers: {
+        "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]").value
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Add AI response to chat box
+      chatBox.innerHTML += `<div class="text-primary"><strong>AI:</strong> ${data.ai}</div>`;
+      chatBox.scrollTop = chatBox.scrollHeight; // auto scroll
+    });
+
+    // clear input field
+    form.reset();
+  });
+});
+</script>
+{% endblock %}

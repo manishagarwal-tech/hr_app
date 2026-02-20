@@ -32,13 +32,13 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'grappelli',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
 #     add candidates app
     'rest_framework',
     'candidates'
@@ -160,10 +160,12 @@ LOGGING = {
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Media files
 MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
@@ -175,3 +177,42 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'upload'
 
+# Caching and async processing
+REDIS_URL = os.getenv("REDIS_URL", 'redis://localhost:6379')
+USE_ASYNC_TASKS = os.getenv("USE_ASYNC_TASKS", "false").lower() == "true"
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "hr_app_cache",
+    }
+}
+
+if REDIS_URL:
+    CACHES["default"] = {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+    }
+
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", REDIS_URL or "")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", REDIS_URL or "")
+
+PROMPT_VERSION = os.getenv("PROMPT_VERSION", "v1")
+CACHE_VERSION = os.getenv("CACHE_VERSION", "v1")
+GOOGLE_ADK_AGENT_CLASS = os.getenv("GOOGLE_ADK_AGENT_CLASS", "")
+
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "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")
+LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama-3.1-8b-instant")
+QUESTION_MODEL_NAME = os.getenv("QUESTION_MODEL_NAME", LLM_MODEL_NAME)
+CHAT_MODEL_NAME = os.getenv("CHAT_MODEL_NAME", LLM_MODEL_NAME)
+
+CACHE_TTLS = {
+    "resume_text": int(os.getenv("CACHE_TTL_RESUME_TEXT", "1209600")),
+    "profile": int(os.getenv("CACHE_TTL_PROFILE", "172800")),
+    "questions": int(os.getenv("CACHE_TTL_QUESTIONS", "43200")),
+}
+
+CHAT_MEMORY_TURNS = int(os.getenv("CHAT_MEMORY_TURNS", "5"))

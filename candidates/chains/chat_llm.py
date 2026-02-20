@@ -1,12 +1,10 @@
 from langchain_groq import ChatGroq
-from langchain.chains import ConversationChain, LLMChain
 from langchain_core.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
 )
-from langchain_core.messages import SystemMessage
-from langchain.chains.conversation.memory import ConversationBufferWindowMemory
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 import os
 import logging
 logger = logging.getLogger(__name__)
@@ -20,11 +18,10 @@ class ChatLLM:
             groq_api_key=os.getenv("GROQ_API_KEY"),
             model_name=os.getenv("CHAT_MODEL_NAME")
         )
+        # Keep a short rolling window of messages (per session/request)
         self.conversational_memory_length = 5
-        self.memory = ConversationBufferWindowMemory(k=self.conversational_memory_length, memory_key="chat_history",
-                                                return_messages=True)
 
-    def process_text(self, user_question):
+    def process_text(self, user_question, chat_history=None):
         system_prompt = (
             "You are a knowledgeable and helpful AI assistant. "
             "Provide clear, direct, and concise answers. "
@@ -35,6 +32,24 @@ class ChatLLM:
         )
         if not user_question:
             return {"error": "No input provided."}
+
+        # Convert stored history (list[dict]) to LangChain messages
+        messages_history = []
+        if chat_history:
+            for item in chat_history:
+                role = (item or {}).get("role")
+                content = (item or {}).get("content")
+                if not content:
+                    continue
+                if role == "human":
+                    messages_history.append(HumanMessage(content=content))
+                elif role == "ai":
+                    messages_history.append(AIMessage(content=content))
+
+        # Trim to last N turns (human+ai => 2 messages per turn)
+        max_messages = self.conversational_memory_length * 2
+        if len(messages_history) > max_messages:
+            messages_history = messages_history[-max_messages:]
 
         # Construct prompt
         prompt = ChatPromptTemplate.from_messages([
@@ -47,16 +62,20 @@ class ChatLLM:
         chain = prompt | self.llm
         logger.info(f"getting chain -> {chain}")
         response = chain.invoke({
-            "chat_history": self.memory.chat_memory.messages,
+            "chat_history": messages_history,
             "human_input": user_question
         })
 
-        # Save to memory if needed
-        self.memory.chat_memory.add_user_message(user_question)
-        self.memory.chat_memory.add_ai_message(response.content)
+        # Return updated history for persistence (e.g., Django session)
+        updated_history = (chat_history or []).copy()
+        updated_history.append({"role": "human", "content": user_question})
+        updated_history.append({"role": "ai", "content": response.content})
+        if len(updated_history) > max_messages:
+            updated_history = updated_history[-max_messages:]
 
         return {
             "system_prompt": system_prompt,
             "human": user_question,
-            "ai": response.content
+            "ai": response.content,
+            "chat_history": updated_history,
         }

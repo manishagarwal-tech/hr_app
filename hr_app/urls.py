@@ -20,6 +20,7 @@ from django.conf.urls.static import static
 from candidates.views import  PortalLoginView, PortalLogoutView
 
 urlpatterns = [
+    path('grappelli/', include('grappelli.urls')),
     path('admin/', admin.site.urls),
     # add urls from candidate apps
     path('candidates/', include('candidates.urls')),
